@@ -1,0 +1,141 @@
+options {
+    STATIC = false;
+    DEBUG_PARSER = true;
+    UNICODE_INPUT = true;
+}
+
+PARSER_BEGIN(Parser)
+
+package parser;
+
+import java.io.Reader;import java.io.StringReader;import java.util.Scanner;public class Parser {
+
+    static public void main(String[] args){
+        try{
+            Scanner s = new Scanner(System.in);
+            while(s.hasNextLine()){
+                String str = s.nextLine();
+                if(str.equals("exit")) break;
+                parseToken(str);
+            }
+        } catch (ParseException ex){
+            ex.printStackTrace();
+        }
+    }
+
+    static public String parseToken(String src) throws ParseException {
+        Reader r = new StringReader(src);
+        System.out.println(src.toString());
+        return new Parser(r).exp();
+    }
+}
+
+
+
+PARSER_END(Parser)
+
+/**
+* lex rule
+*/
+
+// space or tab etc.
+SPECIAL_TOKEN : {
+    <SPACES: ([" ", "\t",  "\n", "\r", "\f"])+>
+}
+
+// block coment
+MORE: { <"/*"> : IN_BLOCK_COMMENT }
+<IN_BLOCK_COMMENT> MORE: { <~[]> }
+<IN_BLOCK_COMMENT> SPECIAL_TOKEN: { <BLOCK_COMMENT: "*/"> : DEFAULT }
+
+// line comment
+SPECIAL_TOKEN: {
+    <LINE_COMMENT: "//" (~["\n", "\r"])* ("\n" | "\r\n" | "\r")?>
+}
+
+// reserved words
+TOKEN: {
+      <VOID     : "void">
+    | <CHAR     : "char">
+    | <SHORT    : "short">
+    | <INT      : "int">
+    | <LONG     : "long">
+    | <STRUCT   : "struct">
+    | <UNION    : "union">
+    | <ENUM     : "enum">
+    | <STATIC   : "static">
+    | <EXTERN   : "extern">
+    | <CONST    : "const">
+    | <SIGNED   : "signed">
+    | <UNSIGNED : "unsigned">
+    | <IF       : "if">
+    | <ELSE     : "else">
+    | <SWITCH   : "switch">
+    | <CASE     : "case">
+    | <DEFAULT_ : "default">
+    | <WHILE    : "while">
+    | <DO       : "do">
+    | <FOR      : "for">
+    | <RETURN   : "return">
+    | <BREAK    : "break">
+    | <CONTINUE : "continue">
+    | <GOTO     : "goto">
+    | <TYPEDEF  : "typedef">
+    | <IMPORT   : "import">
+    | <SIZEOF   : "sizeof">
+    | <AUTO     : "auto">
+}
+
+// ifentifier
+TOKEN : {
+    <IDENTIFIER: ["a"-"z", "A"-"Z", "_"](["a"-"z", "A"-"Z", "0"-"9", "_"])* >
+}
+
+// number
+TOKEN: {
+    <INTEGER: ["1"-"9"] (["0"-"9"])* ("U")? ("L")?
+            | "0" ["x", "X"] (["0"-"9", "a"-"f", "A"-"F"])+ ("U")? ("L")?
+            | "0" (["0"-"7"])* ("U")? ("L")?
+            >
+    |
+    <FLOAT: ["1"-"9"](["0"-"9"])* "." (["0"-"9"])*
+            | "." (["0"-"9"])+
+            | "0." (["0"-"9"])*
+            >
+}
+
+// string
+MORE : { <"\""> : IN_STRING }
+<IN_STRING> MORE : {
+        <(~["\"", "\\", "\r"])+ >
+    |   <"\\" (["0"-"7"]){3}>
+    |   <"\\" ~[]>
+}
+<IN_STRING> TOKEN : {
+    <STRING: "\""> : DEFAULT
+}
+
+// character
+MORE : { <"'">: IN_CHARACTER }
+<IN_CHARACTER> MORE : {
+        <~["'", "\\", "\n", "\r"]>  : CHARACTER_TERM
+    |   <"\\" (["0"-"7"]){3}>       : CHARACTER_TERM
+    |   <"\\" ~[]>                  : CHARACTER_TERM
+}
+<CHARACTER_TERM> TOKEN : {
+    <CHARACTER: "'"> : DEFAULT
+}
+
+String exp():
+{
+    Token t;
+}
+{
+    (    t = <IDENTIFIER>
+    |   t = <CHARACTER>
+    |   t = <STRING>
+    |   t = <INTEGER>
+    |   t = <FLOAT>
+    )
+    {return t.image;}
+}
